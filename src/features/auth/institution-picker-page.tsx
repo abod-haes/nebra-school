@@ -1,0 +1,5 @@
+import {Navigate} from 'react-router-dom'
+import {useAuth} from './auth-context'
+import {useLocale} from '../../app/locale-context'
+import './auth.css'
+export function InstitutionPickerPage(){const {user,institutionId,selectInstitution,logout}=useAuth();const {locale}=useLocale();const ar=locale==='ar';if(!user)return <Navigate to="/login" replace/>;if(user.security?.mustChangePassword)return <Navigate to="/change-password" replace/>;if(institutionId)return <Navigate to="/" replace/>;const schools=user.memberships.filter(m=>m.status==='ACTIVE'&&m.institution.status==='ACTIVE'&&m.institution.type==='SCHOOL');return <main className="auth-screen"><div className="school-auth-card"><h1>{ar?'اختر المدرسة':'Select a school'}</h1>{schools.length?schools.map(m=><button key={m.id} onClick={()=>selectInstitution(m.institution.id)}>{m.institution.name}</button>):<p>{ar?'لا توجد عضوية مدرسة فعالة لهذا الحساب.':'No active school membership for this account.'}</p>}<button className="secondary-button" onClick={()=>void logout()}>{ar?'تسجيل الخروج':'Sign out'}</button></div></main>}
