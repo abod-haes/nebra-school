@@ -1,0 +1,24 @@
+import {useState} from 'react'
+import {useQuery} from '@tanstack/react-query'
+import {Card,PageHeader} from '@nebra/ui'
+import {useAuth} from '../auth/auth-context'
+import {useLocale} from '../../app/locale-context'
+import {useInstitution} from '../institution/institution-context'
+import {apiClient} from '../../lib/api/client'
+import {institutionPath} from '../institution/institution.api'
+import './reports.css'
+type Balance={currency:string;charges:number;payments:number;discounts:number;refunds:number;balance:number}
+type Report={from:string|null;to:string|null;balances:Balance[];scope:string;periodType:string}
+function csv(rows:string[][]){return '\uFEFF'+rows.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n')}
+export function ReportsPage(){
+ const {institutionId}=useAuth(),{locale}=useLocale(),{can}=useInstitution()
+ const ar=locale==='ar',id=institutionId!,[from,setFrom]=useState(''),[to,setTo]=useState('')
+ const query=useQuery({queryKey:['institution',id,'finance-summary',from,to],queryFn:()=>apiClient.get<Report>(institutionPath(id,'finance/summary'),{params:{...(from?{from:new Date(from+'T00:00:00.000Z').toISOString()}:{}),...(to?{to:new Date(to+'T23:59:59.999Z').toISOString()}:{})}}).then(r=>r.data),enabled:can('institution.finance.read')&&(!from||!to||from<=to)})
+ const format=new Intl.NumberFormat(ar?'ar-SY':'en-US',{maximumFractionDigits:2})
+ function download(){const rows=[[ar?'العملة':'Currency',ar?'الرسوم':'Charges',ar?'الدفعات':'Payments',ar?'الحسميات':'Discounts',ar?'الاستردادات':'Refunds',ar?'صافي الحركة':'Net transactions'],...(query.data?.balances??[]).map(b=>[b.currency,...[b.charges,b.payments,b.discounts,b.refunds,b.balance].map(String)])];const url=URL.createObjectURL(new Blob([csv(rows)],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='nebra-finance-report.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+ return <section className="reports-page"><PageHeader title={ar?'التقارير':'Reports'} description={ar?'تقرير الحركة المالية للمؤسسة حسب الفترة والعملة':'Institution financial activity by date range and currency'}/>
+ {!can('institution.finance.read')?<Card><p role="alert">{ar?'ليست لديك صلاحية عرض التقارير المالية':'Finance read permission required'}</p></Card>:<>
+ <Card><div className="reports-filters"><label>{ar?'من تاريخ':'From'}<input type="date" value={from} onChange={e=>setFrom(e.target.value)}/></label><label>{ar?'حتى تاريخ':'To'}<input type="date" value={to} onChange={e=>setTo(e.target.value)}/></label><button type="button" onClick={()=>{setFrom('');setTo('')}}>{ar?'إزالة الفلاتر':'Clear filters'}</button></div>{from&&to&&from>to&&<p role="alert">{ar?'تاريخ البداية يجب أن يسبق النهاية':'From must precede to'}</p>}</Card>
+ <Card><h2>{ar?'الحركة المالية':'Financial transactions'}</h2><p>{ar?'القيم خلال الفترة المختارة، وليست أرصدة تاريخية تراكمية.':'Figures are transactions within the selected period, not historical outstanding balances.'}</p>{query.isPending?<p role="status">{ar?'جارٍ التحميل':'Loading'}</p>:query.isError?<p role="alert">{ar?'تعذر تحميل التقرير':'Failed to load report'} <button onClick={()=>void query.refetch()}>{ar?'إعادة المحاولة':'Retry'}</button></p>:<div className="reports-table"><table><thead><tr><th>{ar?'العملة':'Currency'}</th><th>{ar?'الرسوم':'Charges'}</th><th>{ar?'الدفعات':'Payments'}</th><th>{ar?'الحسميات':'Discounts'}</th><th>{ar?'الاستردادات':'Refunds'}</th><th>{ar?'صافي الحركة':'Net transactions'}</th></tr></thead><tbody>{query.data?.balances.map(b=><tr key={b.currency}><td>{b.currency}</td>{[b.charges,b.payments,b.discounts,b.refunds,b.balance].map((v,i)=><td key={i}>{format.format(v)}</td>)}</tr>)}</tbody></table>{!query.data?.balances.length&&<p>{ar?'لا توجد عمليات خلال هذه الفترة':'No transactions in this period'}</p>}</div>}<div className="reports-actions"><button disabled={!query.data} onClick={download}>{ar?'تصدير CSV':'Export CSV'}</button><button disabled={!query.data} onClick={()=>window.print()}>{ar?'طباعة التقرير':'Print report'}</button></div></Card>
+ </>}</section>
+}
