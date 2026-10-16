@@ -1,0 +1,7 @@
+import {apiClient} from '../../lib/api/client'
+import {institutionPath} from '../institution/institution.api'
+export type RecordKind='students'|'staff'|'attendance'|'schedule'|'courses'|'announcements'|'homework'|'exams'
+export type TableRecord=Record<string,unknown>
+const paths:Record<RecordKind,string>={students:'students',staff:'memberships',attendance:'attendance/sessions',schedule:'schedule',courses:'courses',announcements:'announcements',homework:'homeworks',exams:'exams'}
+export type PageResult={items:TableRecord[];total:number;page:number;limit:number}
+export async function fetchRecords(id:string,kind:RecordKind,page:number,search:string):Promise<PageResult>{const params:Record<string,string|number>={};if(['students','staff'].includes(kind)){params.page=page;params.limit=15;if(search)params.search=search}const {data}=await apiClient.get(institutionPath(id,paths[kind]),{params});if(Array.isArray(data))return{items:data as TableRecord[],total:data.length,page:1,limit:data.length};if(data&&typeof data==='object'&&Array.isArray(data.items))return{items:data.items as TableRecord[],total:Number(data.total??data.items.length),page:Number(data.page??1),limit:Number(data.limit??15)};return{items:[],total:0,page:1,limit:15}}

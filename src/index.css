@@ -1,0 +1,26 @@
+@import '@nebra/ui/styles.css';
+/* Match NEBRA Super Admin: the shared @nebra/ui stylesheet remains the
+   single source for brand, color, spacing, radius and shadow tokens.
+   Override typography only in Arabic, with the exact same values. */
+html[lang='ar'] {
+  --nb-font-sans: 'Cairo', 'Tahoma', Arial, sans-serif;
+  --nb-font-display: 'Cairo', Tahoma, sans-serif;
+  font-family: var(--nb-font-sans);
+  line-height: 1.65;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+html[lang='ar'] :is(body, button, input, textarea, select, label, [role='dialog'], [role='menu']) {
+  font-family: var(--nb-font-sans);
+}
+html[lang='ar'] :is(h1, h2, h3, h4, h5, h6, .nb-page-header__title) {
+  font-family: var(--nb-font-display);
+  line-height: 1.45;
+  letter-spacing: 0;
+}
+html[lang='ar'] :is(code, pre, .nb-mono, [data-ltr]) {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+html,body,#root{min-height:100%;margin:0}body{background:var(--nb-bg);color:var(--nb-text)}button,input,textarea,select{font:inherit}a{text-decoration:none}button{cursor:pointer}.school-shell{min-height:100dvh;display:flex;direction:inherit}.school-sidebar{width:260px;flex:0 0 260px;background:var(--nb-brand-navy);color:var(--nb-brand-white);display:flex;flex-direction:column;position:sticky;top:0;height:100dvh;overflow:auto;padding:23px 13px 15px;box-sizing:border-box}.school-brand{display:flex;align-items:center;gap:12px;padding:4px 13px 28px}.school-brand span{display:grid;line-height:1.3}.school-brand strong{font:700 20px var(--nb-font-display);letter-spacing:.07em}.school-brand small{font-size:11px;color:color-mix(in srgb,var(--nb-brand-white) 78%,transparent);margin-top:5px}.sidebar-heading{font-size:11px;color:color-mix(in srgb,var(--nb-brand-white) 58%,transparent);margin:4px 13px 10px}.school-sidebar nav{display:grid;gap:3px}.nav-item{display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:var(--nb-radius-lg);color:color-mix(in srgb,var(--nb-brand-white) 82%,transparent);font-size:13px;transition:background .18s}.nav-item:hover{background:color-mix(in srgb,var(--nb-brand-white) 8%,transparent);color:var(--nb-brand-white)}.nav-item.active{background:color-mix(in srgb,var(--nb-brand-white) 11%,transparent);color:var(--nb-brand-white);font-weight:700}.sidebar-footer{margin-top:auto;padding:20px 13px 5px;font-size:11px;color:color-mix(in srgb,var(--nb-brand-white) 60%,transparent)}.school-workspace{flex:1;min-width:0}.school-header{height:70px;border-bottom:1px solid var(--nb-border);background:var(--nb-surface);display:flex;align-items:center;justify-content:space-between;padding:0 28px;gap:16px}.header-leading,.header-actions{display:flex;align-items:center;gap:14px}.header-leading{font-size:14px;font-weight:700}.school-content{padding:30px;max-width:1480px;margin:auto}.overview-page{display:grid;gap:24px}.welcome-card{padding:35px!important;background:var(--nb-surface)!important}.eyebrow{color:var(--nb-accent);font-size:11px;font-weight:700;letter-spacing:.12em}.welcome-card h2{font-size:23px;margin:10px 0}.welcome-card p,.foundation-card p{font-size:14px;color:var(--nb-text-muted);line-height:1.9;margin:0}.area-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px}.area-link{color:inherit}.area-card{display:flex!important;align-items:center;gap:13px;padding:24px 18px!important;min-height:92px}.area-card strong{font-size:13px;flex:1}.area-card .flip{transform:rotate(180deg)}.foundation-card{margin-top:24px;padding:36px!important;max-width:660px}.foundation-card h2{font-size:18px;margin:13px 0}.menu-toggle,.close-menu{display:none;border:0;background:transparent;color:inherit}.menu-backdrop{display:none}@media(max-width:1100px){.area-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:850px){.school-sidebar{position:fixed;z-index:30;inset-inline-start:0;transform:translateX(-110%);transition:transform .2s;box-shadow:0 5px 24px #0002}html[dir='rtl'] .school-sidebar{transform:translateX(110%)}.school-sidebar.is-open,html[dir='rtl'] .school-sidebar.is-open{transform:none}.menu-toggle,.close-menu{display:inline-flex;align-items:center;justify-content:center}.close-menu{margin-inline-start:auto}.menu-backdrop{display:block;position:fixed;inset:0;background:#0009;z-index:20;border:0}.school-content{padding:18px}.school-header{padding:0 17px}}@media(max-width:560px){.area-grid{grid-template-columns:1fr}.welcome-card{padding:22px!important}.welcome-card h2{font-size:19px}}
