@@ -151,7 +151,7 @@ export function EnrollmentsPage() {
             : "Assign students to an academic year, grade and section"
         }
       />
-      {can("institution.enrollments.manage") && (
+      {can("institution.enrollments.create") && (
         <Card className="enrollment-panel">
           <h2>{ar ? "تسجيل طالب" : "Enroll a student"}</h2>
           <form onSubmit={submit}>
@@ -286,7 +286,7 @@ export function EnrollmentsPage() {
                     <td>{row.section?.name ?? "—"}</td>
                     <td>{statuses[row.status] ?? row.status}</td>
                     <td>
-                      {can("institution.enrollments.manage") && (
+                      {can("institution.enrollments.update") && (
                         <button
                           type="button"
                           onClick={() => {

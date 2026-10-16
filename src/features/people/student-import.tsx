@@ -71,7 +71,7 @@ export function StudentImport() {
         ),
       ),
   });
-  if (!can("institution.imports.manage")) return null;
+  if (!can("institution.imports.preview")) return null;
   return (
     <Card className="people-form-card">
       <h2>{ar ? "استيراد الطلاب من Excel" : "Import students from Excel"}</h2>
@@ -107,7 +107,7 @@ export function StudentImport() {
           <p>{ar ? 'الصفوف غير الصالحة' : 'Invalid rows'}: {preview.summary?.invalidRows ?? 0}</p>
           {Boolean(preview.errors?.length) && <p role="alert">{ar ? 'يوجد أخطاء في الملف، صححها قبل التأكيد.' : 'The file has errors; correct them before confirming.'}</p>}
           {preview.errorReportCsv && <button type="button" onClick={() => {const blob = new Blob(['\uFEFF',preview.errorReportCsv ?? ''],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download='student-import-errors.csv';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}}>{ar ? 'تحميل تقرير الأخطاء' : 'Download error report'}</button>}
-          <button
+          {can("institution.imports.confirm") && <button
             type="button"
             disabled={
               confirm.isPending ||
@@ -117,7 +117,7 @@ export function StudentImport() {
             onClick={() => confirm.mutate()}
           >
             {ar ? "تأكيد الاستيراد" : "Confirm import"}
-          </button>
+          </button>}
         </div>
       )}
       {error && <p role="alert">{error}</p>}

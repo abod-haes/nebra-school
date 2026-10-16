@@ -11,5 +11,5 @@ export function InstitutionProvider({children}:PropsWithChildren){
  const scope=query.data??null
  const codes=Array.isArray(scope?.permissionCodes)?scope.permissionCodes:[]
  const can=(permission:string)=>codes.includes('*')||codes.includes(permission)
- return <InstitutionContext.Provider value={{scope,can,canManage:can('institution.students.manage'),canOperate:can('institution.schedule.manage')||can('institution.homework.manage')||can('institution.attendance.manage')}}>{children}</InstitutionContext.Provider>
+ return <InstitutionContext.Provider value={{scope,can,canManage:can('institution.students.create')||can('institution.students.update'),canOperate:can('institution.schedule.create')||can('institution.homework.create')||can('institution.attendance.create')}}>{children}</InstitutionContext.Provider>
 }

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { roleLabel, useAssignableStaffRoles } from "./staff-roles";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@nebra/ui";
 import { useAuth } from "../auth/auth-context";
@@ -21,14 +22,6 @@ type Person = {
   user?: { displayName: string; email?:string };
   jobTitle?: string;
 };
-const staffRoles = [
-  "TEACHER",
-  "SUPERVISOR",
-  "ADMINISTRATIVE_STAFF",
-  "ACCOUNTANT",
-  "FINANCE_STAFF",
-];
-const roleNames:Record<string,[string,string]>={TEACHER:['مدرّس','Teacher'],SUPERVISOR:['موجّه','Supervisor'],ADMINISTRATIVE_STAFF:['إداري','Administrative staff'],ACCOUNTANT:['محاسب','Accountant'],FINANCE_STAFF:['موظف مالي','Finance staff']};
 const states: Record<Kind, string[]> = {
   students: ["ACTIVE", "SUSPENDED", "ARCHIVED"],
   staff: ["INVITED", "ACTIVE", "SUSPENDED", "LEFT"],
@@ -36,9 +29,12 @@ const states: Record<Kind, string[]> = {
 export function PeopleManagement({ kind }: { kind: Kind }) {
   const { institutionId } = useAuth(),
     { locale } = useLocale(),
-    { can } = useInstitution();
+    { can, scope } = useInstitution();
   const ar = locale === "ar",
     id = institutionId!;
+  const isDirector = Boolean(scope?.roleCodes.some((code) => code === "SCHOOL_DIRECTOR" || code === "INSTITUTE_DIRECTOR"));
+  const canAssignRoles = isDirector && can("institution.memberships.roles.assign");
+  const roleQuery = useAssignableStaffRoles(id, kind === "staff" && canAssignRoles);
   const qc = useQueryClient(),
     [search, setSearch] = useState(""),
     [selected, setSelected] = useState<Person | null>(null),
@@ -107,52 +103,54 @@ export function PeopleManagement({ kind }: { kind: Kind }) {
     enabled:
       kind === "staff" && !!selected?.id && can("institution.scopes.read"),
   });
-  const permission =
-    kind === "students"
-      ? "institution.students.update"
-      : "institution.memberships.update";
+  const canEditProfile = can("institution.memberships.profile.update");
+  const canChangeStaffStatus = can("institution.memberships.status");
+  const canChangeStudentStatus = can("institution.students.status");
+  const canEditStaff = canEditProfile || canAssignRoles || canChangeStaffStatus;
+  const canEditStudents = can("institution.students.update") || canChangeStudentStatus;
+  const selectedRoleCodes = selected?.roles?.map((assignment) => assignment.role.code) ?? [];
+  const rolesChanged = [...roles].sort().join("|") !== [...selectedRoleCodes].sort().join("|");
+  const directorMembership = selectedRoleCodes.some((code) => code === "SCHOOL_DIRECTOR" || code === "INSTITUTE_DIRECTOR");
   const change = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (action: "profile" | "roles" | "status") => {
       if (!selected) throw Error("No selected record");
-      if (kind === "students") {
-        await apiClient.patch(institutionPath(id, "students/" + selected.id), {
-          fullName: name.trim(),
-          studentCode: code.trim(),
-          phone: phone.trim() || undefined,
-          birthDate:birthDate?birthDate+"T00:00:00.000Z":undefined,
-        });
-      } else {
-        await apiClient.patch(institutionPath(id,"memberships/"+selected.id+"/profile"),{displayName:name.trim(),email:email.trim()||undefined,jobTitle:jobTitle.trim()||undefined});
-        await apiClient.patch(
-          institutionPath(id, "memberships/" + selected.id + "/roles"),
-          { roleCodes: roles },
-        );
+      const root = institutionPath(id, (kind === "students" ? "students/" : "memberships/") + selected.id);
+      if (action === "profile") {
+        if (kind === "students" && can("institution.students.update")) {
+          return apiClient.patch(root, {
+            fullName: name.trim(), studentCode: code.trim(),
+            phone: phone.trim() || undefined,
+            birthDate: birthDate ? birthDate + "T00:00:00.000Z" : undefined,
+          });
+        }
+        if (kind === "staff" && canEditProfile) {
+          return apiClient.patch(root + "/profile", {
+            displayName: name.trim(), email: email.trim() || undefined,
+            jobTitle: jobTitle.trim() || undefined,
+          });
+        }
       }
-      if (status && status !== selected.status && can(kind === 'students' ? 'institution.students.status' : 'institution.memberships.update')) {
-        await apiClient.patch(
-          institutionPath(
-            id,
-            (kind === "students" ? "students/" : "memberships/") +
-              selected.id +
-              "/status",
-          ),
-          { status },
-        );
+      if (action === "roles" && kind === "staff" && canAssignRoles && !directorMembership && rolesChanged) {
+        if (!roleQuery.isSuccess || roles.length === 0 ||
+          roles.some((role) => !roleQuery.options.some((item) => item.code === role) && !selectedRoleCodes.includes(role))) {
+          throw new Error(ar ? "الأدوار غير متاحة أو غير مسموح بها" : "Invalid or unavailable roles");
+        }
+        return apiClient.patch(root + "/roles", { roleCodes: roles });
       }
+      if (action === "status" && !directorMembership && status && status !== selected.status &&
+        (kind === "students" ? canChangeStudentStatus : canChangeStaffStatus)) {
+        return apiClient.patch(root + "/status", { status });
+      }
+      throw new Error(ar ? "هذا الإجراء غير مسموح أو لا يحتوي تغييرات" : "Action not allowed or unchanged");
     },
     onSuccess: () => {
       setSelected(null);
       setError("");
       void qc.invalidateQueries({ queryKey: ["institution", id] });
     },
-    onError: (e) =>
-      setError(
-        getApiErrorMessage(
-          e,
-          ar,
-          ar ? "تعذّر حفظ التعديلات" : "Could not save changes",
-        ),
-      ),
+    onError: (e) => setError(getApiErrorMessage(
+      e, ar, ar ? "تعذّر حفظ الإجراء" : "Could not save the action",
+    )),
   });
   const saveAssignments = useMutation({
     mutationFn: async () => {
@@ -257,7 +255,7 @@ export function PeopleManagement({ kind }: { kind: Kind }) {
                     <td>{x.fullName ?? x.user?.displayName ?? "—"}</td>
                     <td>{({ACTIVE:ar?'نشط':'Active',SUSPENDED:ar?'موقوف':'Suspended',INVITED:ar?'مدعو':'Invited',ARCHIVED:ar?'مؤرشف':'Archived',LEFT:ar?'غادر':'Left'} as Record<string,string>)[x.status??'']??x.status??'—'}</td>
                     <td>
-                      {(can(permission) || (kind === 'students' && can('institution.students.status')) || (kind === 'staff' && can('institution.scopes.update'))) && (
+                      {(kind === 'students' ? canEditStudents : (canEditStaff || can('institution.scopes.teacher.assign') || can('institution.scopes.supervisor.assign'))) && (
                         <button type="button" onClick={() => edit(x)}>
                           {ar ? "تعديل" : "Edit"}
                         </button>
@@ -303,29 +301,40 @@ export function PeopleManagement({ kind }: { kind: Kind }) {
               <label>{ar?"تاريخ الميلاد":"Birth date"}<input type="date" value={birthDate} onChange={e=>setBirthDate(e.target.value)}/></label>
             </>
           ) : (
-            <div><label>{ar?"اسم الموظف":"Staff name"}<input minLength={2} maxLength={200} value={name} onChange={e=>setName(e.target.value)}/></label><label>{ar?"البريد الإلكتروني":"Email"}<input type="email" value={email} onChange={e=>setEmail(e.target.value)}/></label><label>{ar?"المسمى الوظيفي":"Job title"}<input maxLength={160} value={jobTitle} onChange={e=>setJobTitle(e.target.value)}/></label><label>
+            <div><label>{ar?"اسم الموظف":"Staff name"}<input disabled={!canEditProfile} minLength={2} maxLength={200} value={name} onChange={e=>setName(e.target.value)}/></label><label>{ar?"البريد الإلكتروني":"Email"}<input disabled={!canEditProfile} type="email" value={email} onChange={e=>setEmail(e.target.value)}/></label><label>{ar?"المسمى الوظيفي":"Job title"}<input disabled={!canEditProfile} maxLength={160} value={jobTitle} onChange={e=>setJobTitle(e.target.value)}/></label><label>
               {ar ? "الأدوار" : "Roles"}
-              {staffRoles.map((role) => (
-                <span key={role}>
-                  <input
-                    type="checkbox"
-                    checked={roles.includes(role)}
-                    onChange={(e) =>
-                      setRoles((old) =>
-                        e.target.checked
-                          ? [...old, role]
-                          : old.filter((v) => v !== role),
-                      )
-                    }
-                  />
-                  {roleNames[role]?.[ar?0:1]??role}
-                </span>
-              ))}
+              {directorMembership && <small>{ar ? "دور المدير يُدار من لوحة مدير المنصة فقط." : "Director access is managed by Platform Admin only."}</small>}
+              {!canAssignRoles
+                ? (selectedRoleCodes.length ? selectedRoleCodes.map((role) =>
+                    <span key={role}>{roleLabel(role, ar)}</span>
+                  ) : <span>{ar ? "لا توجد أدوار" : "No roles"}</span>)
+                : roleQuery.isPending ? <span role="status">{ar ? "جارٍ تحميل الأدوار" : "Loading roles"}</span>
+                : roleQuery.isError ? <span role="alert">{ar ? "تعذر تحميل الأدوار" : "Could not load roles"} <button type="button" onClick={() => void roleQuery.refetch()}>{ar ? "إعادة المحاولة" : "Retry"}</button></span>
+                : [...roleQuery.options,
+                  ...selectedRoleCodes.filter((code) => !roleQuery.options.some((role) => role.code === code)).map((code) => ({
+                    id: code, code, name: roleLabel(code, ar), isSystem: true, isActive: false,
+                  }))].map((role) => (
+                  <span key={role.code}>
+                    <input
+                      type="checkbox"
+                      disabled={directorMembership || (!role.isActive && !roles.includes(role.code))}
+                      checked={roles.includes(role.code)}
+                      onChange={(e) =>
+                        setRoles((old) => e.target.checked
+                          ? [...old, role.code]
+                          : old.filter((value) => value !== role.code))
+                      }
+                    />
+                    {roleLabel(role.code, ar, roleQuery.options)}
+                    {!role.isActive && (ar ? " (دور قديم أو معطّل)" : " (Legacy or inactive)")}
+                    {!role.isSystem && (ar ? " — مخصص" : " — Custom")}
+                  </span>
+                ))}
             </label></div>
           )}
           <label>
             {ar ? "الحالة" : "Status"}
-            <select value={status} onChange={(e) => setStatus(e.target.value)}>
+            <select value={status} disabled={directorMembership || !(kind === "students" ? canChangeStudentStatus : canChangeStaffStatus)} onChange={(e) => setStatus(e.target.value)}>
               {[...new Set([status, ...states[kind]])].map((s) => (
                 <option key={s} value={s}>
                   {(
@@ -342,15 +351,24 @@ export function PeopleManagement({ kind }: { kind: Kind }) {
             </select>
           </label>
           {error && <p role="alert">{error}</p>}
-          <button
-            type="button"
-            disabled={
-              change.isPending || !can(permission) || (kind === "staff" && roles.length === 0)
-            }
-            onClick={() => change.mutate()}
-          >
-            {ar ? "حفظ التعديلات" : "Save changes"}
-          </button>
+          {(kind === "students" ? can("institution.students.update") : canEditProfile) && (
+            <button type="button" disabled={change.isPending} onClick={() => change.mutate("profile")}>
+              {ar ? "حفظ البيانات" : "Save details"}
+            </button>
+          )}
+          {kind === "staff" && canAssignRoles && (
+            <button type="button"
+              disabled={directorMembership || change.isPending || !rolesChanged || !roleQuery.isSuccess || roles.length === 0}
+              onClick={() => change.mutate("roles")}>
+              {ar ? "حفظ الأدوار" : "Save roles"}
+            </button>
+          )}
+          {(kind === "students" ? canChangeStudentStatus : canChangeStaffStatus) && (
+            <button type="button" disabled={directorMembership || change.isPending || !status || status === selected.status}
+              onClick={() => change.mutate("status")}>
+              {ar ? "حفظ الحالة" : "Save status"}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => {
@@ -361,17 +379,18 @@ export function PeopleManagement({ kind }: { kind: Kind }) {
             {ar ? "إلغاء" : "Cancel"}
           </button>
           {kind === "staff" &&
-            can("institution.scopes.update") &&
-            roles.includes("SUPERVISOR") && (
+            can("institution.scopes.supervisor.assign") &&
+            (roles.includes("ADMINISTRATIVE_STAFF") || roles.some((code) => code === "SUPERVISOR" || code.startsWith("CUSTOM_"))) && (
               <div>
                 <h3>{ar ? "نطاق إشراف الموجّه" : "Supervisor scopes"}</h3>
-                {currentScope.data && supervisorScopes.length === 0 && (
+                {currentScope.data && !scopeLoaded && (
                   <button
                     type="button"
                     onClick={() =>
-                      setSupervisorScopes(
-                        currentScope.data?.supervisorScopes ?? [],
-                      )
+                      (setSupervisorScopes((currentScope.data?.supervisorScopes ?? []).map((scope) => ({
+                        ...(scope.gradeId ? { gradeId: scope.gradeId } : {}),
+                        ...(scope.sectionId ? { sectionId: scope.sectionId } : {}),
+                      }))), setScopeLoaded(true))
                     }
                   >
                     {ar ? "تحميل النطاقات الحالية" : "Load existing scopes"}
@@ -412,7 +431,7 @@ export function PeopleManagement({ kind }: { kind: Kind }) {
                 </label>
                 <button
                   type="button"
-                  disabled={!gradeId && !sectionId}
+                  disabled={!scopeLoaded || (!gradeId && !sectionId)}
                   onClick={() =>
                     setSupervisorScopes((old) => [
                       ...old,
@@ -446,7 +465,7 @@ export function PeopleManagement({ kind }: { kind: Kind }) {
                 ))}
                 <button
                   type="button"
-                  disabled={saveSupervisor.isPending || !scopeLoaded}
+                  disabled={saveSupervisor.isPending || !scopeLoaded || currentScope.isError}
                   onClick={() => saveSupervisor.mutate()}
                 >
                   {ar ? "حفظ نطاق الإشراف" : "Save scopes"}
@@ -454,18 +473,20 @@ export function PeopleManagement({ kind }: { kind: Kind }) {
               </div>
             )}
           {kind === "staff" &&
-            can("institution.scopes.update") &&
+            can("institution.scopes.teacher.assign") &&
             roles.includes("TEACHER") && (
               <div>
                 <h3>
                   {ar ? "تكليف المدرّس بالمواد" : "Teacher subject assignments"}
                 </h3>
-                {currentScope.data && assignments.length === 0 && (
+                {currentScope.data && !scopeLoaded && (
                   <button
                     onClick={() =>
-                      setAssignments(
-                        currentScope.data?.teacherAssignments ?? [],
-                      )
+                      (setAssignments((currentScope.data?.teacherAssignments ?? []).map((item) => ({
+                        subjectId: item.subjectId,
+                        ...(item.gradeId ? { gradeId: item.gradeId } : {}),
+                        ...(item.sectionId ? { sectionId: item.sectionId } : {}),
+                      }))), setScopeLoaded(true))
                     }
                   >
                     {ar
@@ -521,7 +542,7 @@ export function PeopleManagement({ kind }: { kind: Kind }) {
                   </select>
                 </label>
                 <button
-                  disabled={!subjectId}
+                  disabled={!scopeLoaded || !subjectId}
                   onClick={() => {
                     setAssignments((old) => [
                       ...old,
@@ -552,7 +573,7 @@ export function PeopleManagement({ kind }: { kind: Kind }) {
                   </div>
                 ))}
                 <button
-                  disabled={saveAssignments.isPending || !scopeLoaded}
+                  disabled={saveAssignments.isPending || !scopeLoaded || currentScope.isError}
                   onClick={() => saveAssignments.mutate()}
                 >
                   {ar ? "حفظ التكليفات" : "Save assignments"}
