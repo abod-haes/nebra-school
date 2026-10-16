@@ -17,6 +17,7 @@ type Preview = {
     errorCount: number;
   };
   errors?: unknown[];
+  errorReportCsv?: string;
   canConfirm?: boolean;
 };
 export function StudentImport() {
@@ -93,7 +94,7 @@ export function StudentImport() {
       </label>
       <button
         type="button"
-        disabled={!file || inspect.isPending}
+        disabled={!file || inspect.isPending || !file.name.toLowerCase().endsWith('.xlsx') || file.size > 10 * 1024 * 1024}
         onClick={() => inspect.mutate()}
       >
         {ar ? "معاينة الملف" : "Preview file"}
@@ -101,14 +102,11 @@ export function StudentImport() {
       {preview && (
         <div>
           <p>{ar ? "معاينة الاستيراد جاهزة" : "Import preview ready"}</p>
-          <p>
-            {JSON.stringify({
-              totalRows: preview.summary?.totalRows,
-              validRows: preview.summary?.validRows,
-              invalidRows: preview.summary?.invalidRows,
-              errors: preview.errors,
-            }).slice(0, 1500)}
-          </p>
+          <p>{ar ? 'إجمالي الصفوف' : 'Total rows'}: {preview.summary?.totalRows ?? 0}</p>
+          <p>{ar ? 'الصفوف الصالحة' : 'Valid rows'}: {preview.summary?.validRows ?? 0}</p>
+          <p>{ar ? 'الصفوف غير الصالحة' : 'Invalid rows'}: {preview.summary?.invalidRows ?? 0}</p>
+          {Boolean(preview.errors?.length) && <p role="alert">{ar ? 'يوجد أخطاء في الملف، صححها قبل التأكيد.' : 'The file has errors; correct them before confirming.'}</p>}
+          {preview.errorReportCsv && <button type="button" onClick={() => {const blob = new Blob(['\uFEFF',preview.errorReportCsv ?? ''],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download='student-import-errors.csv';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}}>{ar ? 'تحميل تقرير الأخطاء' : 'Download error report'}</button>}
           <button
             type="button"
             disabled={

@@ -27,6 +27,7 @@ const staffRoles = [
   "ACCOUNTANT",
   "FINANCE_STAFF",
 ];
+const roleNames:Record<string,[string,string]>={TEACHER:['مدرّس','Teacher'],SUPERVISOR:['موجّه','Supervisor'],ADMINISTRATIVE_STAFF:['إداري','Administrative staff'],ACCOUNTANT:['محاسب','Accountant'],FINANCE_STAFF:['موظف مالي','Finance staff']};
 const states: Record<Kind, string[]> = {
   students: ["ACTIVE", "SUSPENDED", "ARCHIVED"],
   staff: ["INVITED", "ACTIVE", "SUSPENDED", "LEFT"],
@@ -243,7 +244,7 @@ export function PeopleManagement({ kind }: { kind: Kind }) {
                 return (
                   <tr key={x.id}>
                     <td>{x.fullName ?? x.user?.displayName ?? "—"}</td>
-                    <td>{x.status ?? "—"}</td>
+                    <td>{({ACTIVE:ar?'نشط':'Active',SUSPENDED:ar?'موقوف':'Suspended',INVITED:ar?'مدعو':'Invited',ARCHIVED:ar?'مؤرشف':'Archived',LEFT:ar?'غادر':'Left'} as Record<string,string>)[x.status??'']??x.status??'—'}</td>
                     <td>
                       {(can(permission) || (kind === 'students' && can('institution.students.status'))) && (
                         <button type="button" onClick={() => edit(x)}>
@@ -305,7 +306,7 @@ export function PeopleManagement({ kind }: { kind: Kind }) {
                       )
                     }
                   />
-                  {role}
+                  {roleNames[role]?.[ar?0:1]??role}
                 </span>
               ))}
             </label>
