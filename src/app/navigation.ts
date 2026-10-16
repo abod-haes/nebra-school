@@ -1,0 +1,14 @@
+import { BookOpen, CalendarDays, ChartColumn, ClipboardCheck, GraduationCap, House, Megaphone, School, Settings, Users, Wallet } from 'lucide-react'
+export const navigation=[
+ {path:'/',ar:'نظرة عامة',en:'Overview',icon:House},
+ {path:'/students',ar:'الطلاب',en:'Students',icon:GraduationCap},
+ {path:'/staff',ar:'الكادر',en:'Staff',icon:Users},
+ {path:'/academics',ar:'الهيكل الأكاديمي',en:'Academics',icon:School},
+ {path:'/attendance',ar:'الحضور والغياب',en:'Attendance',icon:ClipboardCheck},
+ {path:'/schedule',ar:'الجدول الدراسي',en:'Schedule',icon:CalendarDays},
+ {path:'/courses',ar:'الدورات والدروس',en:'Courses & lessons',icon:BookOpen},
+ {path:'/announcements',ar:'الإعلانات',en:'Announcements',icon:Megaphone},
+ {path:'/finance',ar:'المالية',en:'Finance',icon:Wallet},
+ {path:'/reports',ar:'التقارير',en:'Reports',icon:ChartColumn},
+ {path:'/settings',ar:'الإعدادات',en:'Settings',icon:Settings}
+] as const

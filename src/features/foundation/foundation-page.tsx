@@ -1,0 +1,4 @@
+import { Card, PageHeader } from '@nebra/ui'
+import { useLocale } from '../../app/locale-context'
+import type { navigation } from '../../app/navigation'
+export function FoundationPage({item}:{item:typeof navigation[number]}){const {locale}=useLocale();const ar=locale==='ar';return <div><PageHeader title={ar?item.ar:item.en} description={ar?'تم تجهيز القسم ضمن هيكل لوحة المدرسة، وربطه بالـ API سيتم ضمن المرحلة القادمة.':'Section scaffold is ready. API integration follows in the next phase.'}/><Card className="foundation-card"><item.icon size={30}/><h2>{ar?'القسم جاهز للتطوير':'Ready for implementation'}</h2><p>{ar?'لا توجد بيانات تجريبية معروضة. سنبني الوظائف وفق صلاحيات المدرسة وعقود NEBRA API.':'No mock records. Features will follow school permissions and NEBRA API contracts.'}</p></Card></div>}
