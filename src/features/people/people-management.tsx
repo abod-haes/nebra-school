@@ -18,7 +18,8 @@ type Person = {
   birthDate?: string;
   status?: string;
   roles?: Array<{ role: { code: string } }>;
-  user?: { displayName: string };
+  user?: { displayName: string; email?:string };
+  jobTitle?: string;
 };
 const staffRoles = [
   "TEACHER",
@@ -44,9 +45,13 @@ export function PeopleManagement({ kind }: { kind: Kind }) {
     [name, setName] = useState(""),
     [code, setCode] = useState(""),
     [phone, setPhone] = useState(""),
+    [email,setEmail]=useState(""),
+    [jobTitle,setJobTitle]=useState(""),
+    [birthDate,setBirthDate]=useState(""),
     [status, setStatus] = useState(""),
     [roles, setRoles] = useState<string[]>([]),
     [error, setError] = useState(""),
+    [scopeLoaded, setScopeLoaded] = useState(false),
     [subjectId, setSubjectId] = useState(""),
     [gradeId, setGradeId] = useState(""),
     [sectionId, setSectionId] = useState(""),
@@ -114,8 +119,10 @@ export function PeopleManagement({ kind }: { kind: Kind }) {
           fullName: name.trim(),
           studentCode: code.trim(),
           phone: phone.trim() || undefined,
+          birthDate:birthDate?birthDate+"T00:00:00.000Z":undefined,
         });
       } else {
+        await apiClient.patch(institutionPath(id,"memberships/"+selected.id+"/profile"),{displayName:name.trim(),email:email.trim()||undefined,jobTitle:jobTitle.trim()||undefined});
         await apiClient.patch(
           institutionPath(id, "memberships/" + selected.id + "/roles"),
           { roleCodes: roles },
@@ -201,10 +208,14 @@ export function PeopleManagement({ kind }: { kind: Kind }) {
     setName(p.fullName ?? p.user?.displayName ?? "");
     setCode(p.studentCode ?? "");
     setPhone(p.phone ?? "");
+    setBirthDate(p.birthDate?.slice(0,10)??"");
+    setEmail(p.user?.email??"");
+    setJobTitle(p.jobTitle??"");
     setStatus(p.status ?? "ACTIVE");
     setRoles(p.roles?.map((r) => r.role.code) ?? []);
     setAssignments([]);
     setSupervisorScopes([]);
+    setScopeLoaded(false);
     setError("");
   }
   return (
@@ -246,7 +257,7 @@ export function PeopleManagement({ kind }: { kind: Kind }) {
                     <td>{x.fullName ?? x.user?.displayName ?? "—"}</td>
                     <td>{({ACTIVE:ar?'نشط':'Active',SUSPENDED:ar?'موقوف':'Suspended',INVITED:ar?'مدعو':'Invited',ARCHIVED:ar?'مؤرشف':'Archived',LEFT:ar?'غادر':'Left'} as Record<string,string>)[x.status??'']??x.status??'—'}</td>
                     <td>
-                      {(can(permission) || (kind === 'students' && can('institution.students.status'))) && (
+                      {(can(permission) || (kind === 'students' && can('institution.students.status')) || (kind === 'staff' && can('institution.scopes.update'))) && (
                         <button type="button" onClick={() => edit(x)}>
                           {ar ? "تعديل" : "Edit"}
                         </button>
@@ -289,9 +300,10 @@ export function PeopleManagement({ kind }: { kind: Kind }) {
                   onChange={(e) => setPhone(e.target.value)}
                 />
               </label>
+              <label>{ar?"تاريخ الميلاد":"Birth date"}<input type="date" value={birthDate} onChange={e=>setBirthDate(e.target.value)}/></label>
             </>
           ) : (
-            <label>
+            <div><label>{ar?"اسم الموظف":"Staff name"}<input minLength={2} maxLength={200} value={name} onChange={e=>setName(e.target.value)}/></label><label>{ar?"البريد الإلكتروني":"Email"}<input type="email" value={email} onChange={e=>setEmail(e.target.value)}/></label><label>{ar?"المسمى الوظيفي":"Job title"}<input maxLength={160} value={jobTitle} onChange={e=>setJobTitle(e.target.value)}/></label><label>
               {ar ? "الأدوار" : "Roles"}
               {staffRoles.map((role) => (
                 <span key={role}>
@@ -309,7 +321,7 @@ export function PeopleManagement({ kind }: { kind: Kind }) {
                   {roleNames[role]?.[ar?0:1]??role}
                 </span>
               ))}
-            </label>
+            </label></div>
           )}
           <label>
             {ar ? "الحالة" : "Status"}
@@ -333,7 +345,7 @@ export function PeopleManagement({ kind }: { kind: Kind }) {
           <button
             type="button"
             disabled={
-              change.isPending || (kind === "staff" && roles.length === 0)
+              change.isPending || !can(permission) || (kind === "staff" && roles.length === 0)
             }
             onClick={() => change.mutate()}
           >
@@ -434,7 +446,7 @@ export function PeopleManagement({ kind }: { kind: Kind }) {
                 ))}
                 <button
                   type="button"
-                  disabled={saveSupervisor.isPending}
+                  disabled={saveSupervisor.isPending || !scopeLoaded}
                   onClick={() => saveSupervisor.mutate()}
                 >
                   {ar ? "حفظ نطاق الإشراف" : "Save scopes"}
@@ -540,7 +552,7 @@ export function PeopleManagement({ kind }: { kind: Kind }) {
                   </div>
                 ))}
                 <button
-                  disabled={saveAssignments.isPending}
+                  disabled={saveAssignments.isPending || !scopeLoaded}
                   onClick={() => saveAssignments.mutate()}
                 >
                   {ar ? "حفظ التكليفات" : "Save assignments"}
