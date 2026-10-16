@@ -3,6 +3,7 @@ export const navigation=[
  {path:'/',ar:'نظرة عامة',en:'Overview',icon:House},
  {path:'/students',ar:'الطلاب',en:'Students',icon:GraduationCap},
  {path:'/staff',ar:'الكادر',en:'Staff',icon:Users},
+ {path:'/enrollments',ar:'التسجيلات المدرسية',en:'Enrollments',icon:GraduationCap},
  {path:'/academics',ar:'الهيكل الأكاديمي',en:'Academics',icon:School},
  {path:'/attendance',ar:'الحضور والغياب',en:'Attendance',icon:ClipboardCheck},
  {path:'/schedule',ar:'الجدول الدراسي',en:'Schedule',icon:CalendarDays},
