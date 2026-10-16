@@ -10,7 +10,7 @@ npm run dev
 npm run check
 ```
 
-Default API: `https://nebra.abdulrahman-hares.com/api/v1`. Override using `VITE_API_URL` in `.env.local`.
+By default both development and production use `https://nebra.abdulrahman-hares.com/api/v1`. Override using `VITE_API_URL` in `.env.local`. For direct browser requests from localhost, the deployed backend must include `http://localhost:5173` in `CORS_ORIGINS` alongside existing origins.
 
 ## Structure
 
