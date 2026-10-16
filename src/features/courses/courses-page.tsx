@@ -9,6 +9,7 @@ import {apiClient} from '../../lib/api/client'
 import {institutionPath} from '../institution/institution.api'
 import {getApiErrorMessage} from '../../lib/api/error-message'
 import './courses.css'
+import './course-dialog.css'
 import {CourseAdvanced} from './course-advanced'
 type Lesson={id:string;title:string;description?:string;isPreview?:boolean;sortOrder?:number;resources?:Array<{id:string;title:string}>}
 type Unit={id:string;title:string;sortOrder?:number;lessons?:Lesson[]}
