@@ -1,4 +1,4 @@
-import { BookOpen, CalendarDays, ChartColumn, ClipboardCheck, GraduationCap, House, Megaphone, School, Settings, Users, Wallet } from 'lucide-react'
+import { BookOpen, CalendarDays, ChartColumn, FileCheck2, NotebookPen, ClipboardCheck, GraduationCap, House, Megaphone, School, Settings, Users, Wallet } from 'lucide-react'
 export const navigation=[
  {path:'/',ar:'نظرة عامة',en:'Overview',icon:House},
  {path:'/students',ar:'الطلاب',en:'Students',icon:GraduationCap},
@@ -8,6 +8,8 @@ export const navigation=[
  {path:'/schedule',ar:'الجدول الدراسي',en:'Schedule',icon:CalendarDays},
  {path:'/courses',ar:'الدورات والدروس',en:'Courses & lessons',icon:BookOpen},
  {path:'/announcements',ar:'الإعلانات',en:'Announcements',icon:Megaphone},
+ {path:'/homework',ar:'الواجبات',en:'Homework',icon:NotebookPen},
+ {path:'/exams',ar:'الامتحانات والعلامات',en:'Exams & Grades',icon:FileCheck2},
  {path:'/finance',ar:'المالية',en:'Finance',icon:Wallet},
  {path:'/reports',ar:'التقارير',en:'Reports',icon:ChartColumn},
  {path:'/settings',ar:'الإعدادات',en:'Settings',icon:Settings}
